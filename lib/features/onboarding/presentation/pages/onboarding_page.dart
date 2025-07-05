@@ -148,7 +148,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   else
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/auth');
+                        
+                        Navigator.pushReplacementNamed(context, '/homescreen');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
