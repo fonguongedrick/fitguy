@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,120 +10,152 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _screens = [
-    const HomeContentScreen(),
-    const WorkoutDetailScreen(workoutName: 'Workouts'),
-    const MealPlanScreen(),
-    const ProgressScreen(),
-    const CommunityScreen(),
+  int _selectedCategoryIndex = 0;
+  final List<String> _categories = [
+    'Popular',
+    'Lower Body',
+    'Upper Body',
+    'Cardio',
+    'Yoga'
   ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
+      backgroundColor: Colors.grey[50],
+      appBar: _buildAppBar(),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSearchSection(),
+              const SizedBox(height: 25),
+              _buildTodaysPlan(context),
+              const SizedBox(height: 25),
+              _buildGetStarted(context),
+              const SizedBox(height: 25),
+              _buildRecommendedPlans(context),
+              const SizedBox(height: 25),
+              _buildActivitySection(),
+              const SizedBox(height: 25),
+              _buildLowerBodyTraining(),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center_outlined),
-            label: 'Workouts',
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(context, 0),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            'Good Morning,',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            label: 'Meals',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics_outlined),
-            label: 'Progress',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            label: 'Community',
+          Text(
+            'Pramuditya Uzumaki',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class HomeContentScreen extends StatelessWidget {
-  const HomeContentScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Section
-            _buildSearchSection(context),
-            const SizedBox(height: 24),
-            // Today's Plan
-            _buildTodaysPlan(context),
-            const SizedBox(height: 24),
-            // Quick Start
-            _buildQuickStart(context),
-            const SizedBox(height: 24),
-            // Popular Workouts
-            _buildPopularWorkouts(context),
-          ],
+      actions: [
+        IconButton(
+          icon: Badge(
+            smallSize: 8,
+            child: const Icon(Icons.notifications_none, size: 28),
+          ),
+          onPressed: () {},
         ),
-      ),
+      ],
+      elevation: 0,
+      backgroundColor: Colors.transparent,
     );
   }
 
-  Widget _buildSearchSection(BuildContext context) {
+  Widget _buildSearchSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Search',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          decoration: InputDecoration(
-            hintText: 'Search workouts, meals...',
-            prefixIcon: const Icon(Icons.search),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
+        const Text(
+          'Find Your Workout',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          children: [
-            Chip(label: Text('Popular Workouts')),
-            Chip(label: Text('Lower Body')),
-            Chip(label: Text('Q 2022')),
-            Chip(label: Text('Q 2050')),
-          ],
+        const SizedBox(height: 15),
+        TextField(
+          decoration: InputDecoration(
+            hintText: 'Search workouts...',
+            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            hintStyle: TextStyle(color: Colors.grey[400]),
+          ),
+        ),
+        const SizedBox(height: 15),
+        SizedBox(
+          height: 40,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedCategoryIndex = index;
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _selectedCategoryIndex == index
+                        ? Colors.deepPurple
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _categories[index],
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _selectedCategoryIndex == index
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -135,127 +168,149 @@ class HomeContentScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               "Today's Plan",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             TextButton(
               onPressed: () {},
-              child: Text('View All'),
+              child: const Text(
+                'See All',
+                style: TextStyle(color: Colors.deepPurple),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Push Up Challenge',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'TOP',
+        const SizedBox(height: 15),
+        GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(context, '/workout-detail', arguments: {
+              'title': 'Push Up Challenge',
+              'image': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b',
+              'time': '15 min',
+              'calories': '120 cal',
+              'level': 'Beginner',
+              'description': 'The push-up is a common calisthenics exercise beginning from the prone position.',
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.deepPurple, Colors.blue],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.2),
+                  spreadRadius: 2,
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Push Up Challenge',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontSize: 12,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: 0.8,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surface.withOpacity(0.5),
-                color: Theme.of(context).colorScheme.primary,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '20% to go today',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Set Up',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'TOP PICK',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
-                  ),
-                ],
-              ),
-            ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                LinearProgressIndicator(
+                  value: 0.2,
+                  backgroundColor: Colors.white.withOpacity(0.3),
+                  color: Colors.white,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                const SizedBox(height: 10),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '20% completed',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '15 min • 120 cal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildQuickStart(BuildContext context) {
+  Widget _buildGetStarted(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Get Started',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        const Text(
+          'Quick Exercises',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.5,
+        const SizedBox(height: 15),
+        Row(
           children: [
-            _buildWorkoutCard(
+            _buildExerciseCard(
               context,
               'Knee Push Up',
-              'assets/knee_pushup.svg',
-              'Beginner',
+              'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b',
+              'Beginner • 10 min',
+              Icons.favorite_border,
             ),
-            _buildWorkoutCard(
+            const SizedBox(width: 15),
+            _buildExerciseCard(
               context,
               'Squats',
-              'assets/squats.svg',
-              'Beginner',
-            ),
-            _buildWorkoutCard(
-              context,
-              'Plank',
-              'assets/plank.svg',
-              'Intermediate',
-            ),
-            _buildWorkoutCard(
-              context,
-              'Jumping Jacks',
-              'assets/jumping_jacks.svg',
-              'Beginner',
+              'https://images.unsplash.com/photo-1534258936925-c58bed479fcb',
+              'Beginner • 12 min',
+              Icons.favorite,
+              isFavorite: true,
             ),
           ],
         ),
@@ -263,301 +318,103 @@ class HomeContentScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkoutCard(
-      BuildContext context, String title, String icon, String level) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          SvgPicture.asset(
-            icon,
-            width: 40,
-            height: 40,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                level,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPopularWorkouts(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Best Quarantine Workout',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
+  Widget _buildExerciseCard(
+      BuildContext context,
+      String title,
+      String imageUrl,
+      String subtitle,
+      IconData icon, {
+        bool isFavorite = false,
+      }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(context, '/workout-detail', arguments: {
+            'title': title,
+            'image': imageUrl,
+            'time': '10 min',
+            'calories': '100 cal',
+            'level': 'Beginner',
+            'description': 'This is a great exercise for $title that helps build strength and endurance.',
+          });
+        },
+        child: Container(
           height: 180,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildPopularWorkoutItem(
-                context,
-                'Home Workout',
-                'Best for you',
-                'assets/home_workout.svg',
-              ),
-              const SizedBox(width: 12),
-              _buildPopularWorkoutItem(
-                context,
-                'No Equipment',
-                'Challenge',
-                'assets/no_equipment.svg',
-              ),
-              const SizedBox(width: 12),
-              _buildPopularWorkoutItem(
-                context,
-                'Lower Body',
-                'Training',
-                'assets/lower_body.svg',
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPopularWorkoutItem(
-      BuildContext context, String title, String subtitle, String icon) {
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SvgPicture.asset(
-            icon,
-            width: 40,
-            height: 40,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const Spacer(),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Progress'),
-      ),
-      body: Center(
-        child: Text(
-          'Progress Screen',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ),
-    );
-  }
-}
-
-class CommunityScreen extends StatelessWidget {
-  const CommunityScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Community'),
-      ),
-      body: Center(
-        child: Text(
-          'Community Screen',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ),
-    );
-  }
-}
-class WorkoutDetailScreen extends StatelessWidget {
-  final String workoutName;
-
-  const WorkoutDetailScreen({super.key, required this.workoutName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(workoutName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  image: DecorationImage(
-                    image: AssetImage('assets/demo.jpg'),
-                    fit: BoxFit.cover,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
                   ),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildWorkoutStat(
-                    context,
-                    Icons.timer_outlined,
-                    '15 min',
-                  ),
-                  const SizedBox(width: 16),
-                  _buildWorkoutStat(
-                    context,
-                    Icons.local_fire_department_outlined,
-                    '120 cal',
-                  ),
-                  const SizedBox(width: 16),
-                  _buildWorkoutStat(
-                    context,
-                    Icons.star_outline,
-                    'Beginner',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Description',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The lower abdomen and legs are the most difficult areas of the body that would have been on a offer. Come in to this new schedule! We hope ourselves will can reduce weight even if you don\'t use tools.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'How to do it',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              ...List.generate(
-                3,
-                (index) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      Colors.transparent,
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  child: Text('Start Workout'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: Icon(
+                    icon,
+                    color: isFavorite ? Colors.red : Colors.white,
                   ),
+                  onPressed: () {},
+                ),
+              ),
+              Positioned(
+                bottom: 15,
+                left: 15,
+                right: 15,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -567,47 +424,136 @@ class WorkoutDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkoutStat(BuildContext context, IconData icon, String text) {
-    return Row(
+  Widget _buildRecommendedPlans(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 4),
-        Text(text),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recommended Plans',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: const Text(
+                'View All',
+                style: TextStyle(color: Colors.deepPurple),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
+        SizedBox(
+          height: 160,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildPlanCard(
+                'Beginner Full Body',
+                'https://images.unsplash.com/photo-1538805060514-97d9cc17730c',
+                '4 weeks • 3x/week',
+                '1200 members',
+              ),
+              const SizedBox(width: 15),
+              _buildPlanCard(
+                'Core Strength',
+                'https://images.unsplash.com/photo-1545205597-3d9d02c29597',
+                '6 weeks • 4x/week',
+                '850 members',
+              ),
+              const SizedBox(width: 15),
+              _buildPlanCard(
+                'Yoga Challenge',
+                'https://images.unsplash.com/photo-1545389336-cf090694435e',
+                '30 days • Daily',
+                '2300 members',
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
-}
-class MealPlanScreen extends StatelessWidget {
-  const MealPlanScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cameroonian Meal Plans'),
-      ),
-      body: DefaultTabController(
-        length: 3,
+  Widget _buildPlanCard(
+      String title, String imageUrl, String subtitle, String members) {
+    return SizedBox(
+      width: 200,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              color: Theme.of(context).colorScheme.surface,
-              child: TabBar(
-                labelColor: Theme.of(context).colorScheme.primary,
-                unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                tabs: const [
-                  Tab(text: 'Breakfast'),
-                  Tab(text: 'Lunch'),
-                  Tab(text: 'Dinner'),
-                ],
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                ),
+                errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             ),
-            Expanded(
-              child: TabBarView(
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildMealList(context, breakfastMeals),
-                  _buildMealList(context, lunchMeals),
-                  _buildMealList(context, dinnerMeals),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.people_outline, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        members,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.star, size: 14, color: Colors.amber),
+                      const SizedBox(width: 2),
+                      const Text(
+                        '4.8',
+                        style: TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -617,153 +563,213 @@ class MealPlanScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMealList(BuildContext context, List<Map<String, dynamic>> meals) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: meals.length,
-      itemBuilder: (context, index) {
-        final meal = meals[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildActivitySection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {},
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: AssetImage(meal['image']),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          meal['name'],
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          meal['description'],
-                          style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.timer_outlined, size: 16),
-                            const SizedBox(width: 4),
-                            Text('${meal['time']} min'),
-                            const SizedBox(width: 16),
-                            Icon(Icons.local_fire_department_outlined, size: 16),
-                            const SizedBox(width: 4),
-                            Text('${meal['calories']} cal'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Your Activity',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 15),
+          _buildActivityProgress('Workouts Completed', 0.7, '7/10'),
+          _buildActivityProgress('Calories Burned', 0.5, '1,200/2,400'),
+          _buildActivityProgress('Weekly Goal', 0.9, '4/5 days'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityProgress(String title, double progress, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[200],
+            color: Colors.deepPurple,
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLowerBodyTraining() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Lower Body Focus',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Target your legs and glutes with these specialized workouts designed to build strength and endurance in your lower body.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildStatCard(Icons.timer, '30 min', 'Workout Time'),
+              _buildStatCard(Icons.local_fire_department, '250 cal', 'Avg Burn'),
+              _buildStatCard(Icons.emoji_events, 'Beginner', 'Level'),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                backgroundColor: Colors.deepPurple,
+              ),
+              child: const Text(
+                'Start Training',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-        );
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(IconData icon, String value, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 20, color: Colors.deepPurple),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BottomNavigationBar _buildBottomNavBar(BuildContext context, int currentIndex) {
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: Colors.deepPurple,
+      unselectedItemColor: Colors.grey,
+      showUnselectedLabels: true,
+      backgroundColor: Colors.white,
+      elevation: 10,
+      items: [
+        _buildNavItem(Icons.home_outlined, Icons.home, 'Home'),
+        _buildNavItem(Icons.fitness_center_outlined, Icons.fitness_center, 'Workouts'),
+        _buildNavItem(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Meals'),
+        _buildNavItem(Icons.analytics_outlined, Icons.analytics, 'Progress'),
+        _buildNavItem(Icons.people_outline, Icons.people, 'Community'),
+      ],
+      onTap: (index) {
+        if (index == 1) {
+          Navigator.pushNamed(context, '/workouts');
+        } else if (index == 2) {
+          Navigator.pushNamed(context, '/meal-plans');
+        } else if (index == 3) {
+          Navigator.pushNamed(context, '/progress');
+        } else if (index == 4) {
+          Navigator.pushNamed(context, '/community');
+        }
       },
     );
   }
+
+  BottomNavigationBarItem _buildNavItem(
+      IconData icon, IconData activeIcon, String label) {
+    return BottomNavigationBarItem(
+      icon: Icon(icon),
+      activeIcon: Icon(activeIcon),
+      label: label,
+    );
+  }
 }
-
-// Sample data
-final breakfastMeals = [
-  {
-    'name': 'Koki Corn',
-    'description': 'Traditional Cameroonian steamed bean cake',
-    'image': 'assets/koki_corn.jpg',
-    'time': 15,
-    'calories': 320,
-  },
-  {
-    'name': 'Plantain Porridge',
-    'description': 'Healthy porridge with ripe plantains',
-    'image': 'assets/plantain_porridge.jpg',
-    'time': 10,
-    'calories': 280,
-  },
-];
-
-final lunchMeals = [
-  {
-    'name': 'Ndolé',
-    'description': 'National dish with bitterleaf, nuts and fish',
-    'image': 'assets/ndole.jpg',
-    'time': 30,
-    'calories': 450,
-  },
-  {
-    'name': 'Eru',
-    'description': 'Vegetable soup with waterleaf and okok',
-    'image': 'assets/eru.jpg',
-    'time': 25,
-    'calories': 380,
-  },
-];
-
-final dinnerMeals = [
-  {
-    'name': 'Achu Soup',
-    'description': 'Yellow soup with cocoyam fufu',
-    'image': 'assets/achu.jpg',
-    'time': 20,
-    'calories': 400,
-  },
-  {
-    'name': 'Kondre',
-    'description': 'Plantain stew with meat or fish',
-    'image': 'assets/kondre.jpg',
-    'time': 15,
-    'calories': 350,
-  },
-];
-
-
-
-
-// final ThemeData lightTheme = ThemeData(
-//   colorScheme: ColorScheme.light(
-//     primary: Color(0xFF6C5CE7),
-//     secondary: Color(0xFF00CEFF),
-//     surface: Colors.white,
-//     background: Color(0xFFF5F6FA),
-//     onPrimary: Colors.white,
-//     onSurface: Color(0xFF2D3436),
-//   ),
-//   useMaterial3: true,
-// );
-
-// final ThemeData darkTheme = ThemeData(
-//   colorScheme: ColorScheme.dark(
-//     primary: Color(0xFF6C5CE7),
-//     secondary: Color(0xFF00CEFF),
-//     surface: Color(0xFF2D3436),
-//     background: Color(0xFF1E1E1E),
-//     onPrimary: Colors.white,
-//     onSurface: Colors.white,
-//   ),
-//   useMaterial3: true,
-// );
