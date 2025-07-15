@@ -1,8 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<!-- Permissions required -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- android/app/src/main/AndroidManifest.xml -->
+   <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:label="fitguy1">
+        android:icon="@mipmap/ic"
+        android:label="Fit Guy">
+        android:usesCleartextTraffic="true"
         <activity
             android:name=".MainActivity"
             android:exported="true"

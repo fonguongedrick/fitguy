@@ -1,81 +1,195 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WorkoutDetailsScreen extends StatelessWidget {
+class WorkoutDetailsScreen extends StatefulWidget {
+  final String title;
+  final String videoPath;
+  final String time;
+  final String level;
+  final String description;
+
+  const WorkoutDetailsScreen({
+    super.key,
+    required this.title,
+    required this.videoPath,
+    required this.time,
+    required this.level,
+    required this.description,
+  });
+
   @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
+  State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(args['title'] ?? 'Workout Detail'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: () {},
+class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
+  late VideoPlayerController _controller;
+  bool isLocalAsset = true;
+  bool isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    isLocalAsset = !widget.videoPath.startsWith('http');
+
+    _controller = isLocalAsset
+        ? VideoPlayerController.asset(widget.videoPath)
+        : VideoPlayerController.network(widget.videoPath);
+
+    _controller.initialize().then((_) {
+      setState(() {});
+    });
+
+    _controller.setLooping(false);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addToMyWorkouts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    setState(() {
+      isAdding = true;
+    });
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users_fitguy')
+          .doc(user.uid)
+          .collection('workouts')
+          .add({
+        'title': widget.title,
+        'videoPath': widget.videoPath,
+        'time': widget.time,
+        'level': widget.level,
+        'description': widget.description,
+        'addedAt': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Workout added successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        isAdding = false;
+      });
+    }
+  }
+
+  Widget _buildVideoPlayer() {
+    if (!_controller.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          VideoPlayer(_controller),
+          _ControlsOverlay(controller: _controller),
+          VideoProgressIndicator(
+            _controller,
+            allowScrubbing: true,
+            padding: const EdgeInsets.symmetric(vertical: 10),
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: Colors.deepPurple,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: CachedNetworkImage(
-                imageUrl: args['image'] ?? 'https://via.placeholder.com/400',
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildDetailItem(Icons.timer_outlined, args['time'] ?? '10 min'),
-                _buildDetailItem(
-                    Icons.local_fire_department_outlined, args['calories'] ?? '100 cal'),
-                _buildDetailItem(Icons.star_outline, args['level'] ?? 'Beginner'),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Description',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              args['description'] ?? 'No description available',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Instructions',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _buildInstructionStep(1, 'Warm up for 5 minutes with light cardio'),
-            _buildInstructionStep(2, 'Perform 3 sets of 10-12 repetitions'),
-            _buildInstructionStep(3, 'Rest 30-60 seconds between sets'),
-            _buildInstructionStep(4, 'Cool down with stretching for 5 minutes'),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            _buildVideoPlayer(),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  backgroundColor: Colors.deepPurple,
-                ),
-                child: const Text(
-                  'Start Workout',
-                  style: TextStyle(color: Colors.white),
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text("⏱ ${widget.time}"),
+                        backgroundColor: Colors.deepPurple.shade100,
+                      ),
+                      const SizedBox(width: 10),
+                      Chip(
+                        label: Text("🔥 ${widget.level}"),
+                        backgroundColor: Colors.orange.shade100,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Description',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.description,
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: isAdding
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            )
+                          : const Text('Add to Workouts'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.deepPurple,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: isAdding ? null : _addToMyWorkouts,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -83,45 +197,35 @@ class WorkoutDetailsScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildDetailItem(IconData icon, String text) {
-    return Column(
-      children: [
-        Icon(icon, size: 30, color: Colors.deepPurple),
-        const SizedBox(height: 5),
-        Text(text),
-      ],
-    );
-  }
+// Reusable video control overlay (play/pause button)
+class _ControlsOverlay extends StatelessWidget {
+  final VideoPlayerController controller;
 
-  Widget _buildInstructionStep(int number, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.deepPurple,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
+  const _ControlsOverlay({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        controller.value.isPlaying ? controller.pause() : controller.play();
+      },
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        reverseDuration: const Duration(milliseconds: 200),
+        child: controller.value.isPlaying
+            ? const SizedBox.shrink()
+            : Container(
+                color: Colors.black38,
+                child: const Center(
+                  child: Icon(
+                    Icons.play_arrow,
+                    size: 64,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(text),
-          ),
-        ],
       ),
     );
   }

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 class WorkoutVideoCard extends StatefulWidget {
-  final String videoUrl;
+  final String videoAssetPath; // Changed from videoUrl to videoAssetPath
 
-  const WorkoutVideoCard({super.key, required this.videoUrl});
+  const WorkoutVideoCard({super.key, required this.videoAssetPath});
 
   @override
   _WorkoutVideoCardState createState() => _WorkoutVideoCardState();
@@ -18,7 +18,8 @@ class _WorkoutVideoCardState extends State<WorkoutVideoCard> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.videoUrl)
+    // Use VideoPlayerController.asset() for assets folder videos
+    _controller = VideoPlayerController.asset(widget.videoAssetPath)
       ..initialize().then((_) {
         setState(() {});
       });
@@ -108,7 +109,7 @@ class _WorkoutVideoCardState extends State<WorkoutVideoCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${widget.videoUrl.split('/').last.split('.').first} Workout',
+                      '${widget.videoAssetPath.split('/').last.split('.').first} Workout',
                       style: const TextStyle(
                         fontWeight: FontWeight.w500,
                       ),

@@ -75,7 +75,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(context, 4),
+      //bottomNavigationBar: _buildBottomNavBar(context, 4),
     );
   }
 

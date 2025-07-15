@@ -1,26 +1,30 @@
+import 'package:fitguy1/features/home/presentation/page/work_out_details_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fitguy1/features/home/presentation/page/work_out_category_screen.dart';
 import 'package:fitguy1/features/home/presentation/page/work_out_detail_screen.dart';
-import 'package:flutter/material.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class WorkoutsScreen extends StatelessWidget {
-  const WorkoutsScreen({super.key});
+  final user = FirebaseAuth.instance.currentUser;
+  String? get userId => user?.uid;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Workouts',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             color: Colors.black,
+            fontSize: 24,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
@@ -36,77 +40,122 @@ class WorkoutsScreen extends StatelessWidget {
             children: [
               _buildProgressCard(),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'Categories',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 12),
-              _buildCategoryGrid(),
+              _buildCategoryGrid(context),
               const SizedBox(height: 24),
-              const Text(
-                'Popular Workouts',
-                style: TextStyle(
+              Text(
+                'All Workouts',
+                style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 12),
-              _buildPopularWorkouts(context),
+              _buildAllWorkouts(context),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(context, 1),
     );
   }
 
   Widget _buildProgressCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Colors.deepPurple, Colors.blue],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.3),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           const Icon(Icons.emoji_events, color: Colors.amber, size: 40),
           const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Weekly Progress',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: 0.7,
-                  backgroundColor: Colors.white.withOpacity(0.3),
-                  color: Colors.white,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '3 of 5 workouts completed',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            child: Builder(
+              builder: (context) {
+                final user = FirebaseAuth.instance.currentUser;
+
+                if (user == null) {
+                  return Text(
+                    "User not logged in",
+                    style: GoogleFonts.poppins(color: Colors.white),
+                  );
+                }
+
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users_fitguy')
+                      .doc(user.uid)
+                      .collection('workouts')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Text(
+                        "Something went wrong",
+                        style: GoogleFonts.poppins(color: Colors.white),
+                      );
+                    }
+
+                    final total = snapshot.data?.docs.length ?? 0;
+                    const goal = 5;
+                    final progress = (total / goal).clamp(0.0, 1.0);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Weekly Progress',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.white54,
+                          color: Colors.white,
+                          minHeight: 8,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$total of $goal workouts completed',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -114,210 +163,281 @@ class WorkoutsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryGrid() {
-    final categories = [
-      {'icon': Icons.fitness_center, 'name': 'Strength', 'color': Colors.orange},
-      {'icon': Icons.directions_run, 'name': 'Cardio', 'color': Colors.blue},
-      {'icon': Icons.self_improvement, 'name': 'Yoga', 'color': Colors.green},
-      {'icon': Icons.water, 'name': 'Swimming', 'color': Colors.teal},
-      {'icon': Icons.pedal_bike, 'name': 'Cycling', 'color': Colors.red},
-      {'icon': Icons.add, 'name': 'More', 'color': Colors.grey},
-    ];
+  Widget _buildCategoryGrid(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('workoutCategories').snapshots(),
+      builder: (c, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.9,
-      ),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => WorkoutCategoryScreen(
-                  categoryName: categories[index]['name'] as String,
+        if (snap.hasError) {
+          return Text(
+            "Error loading categories",
+            style: GoogleFonts.poppins(color: Colors.red),
+          );
+        }
+
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return Text(
+            "No categories available",
+            style: GoogleFonts.poppins(color: Colors.grey),
+          );
+        }
+
+        final docs = snap.data!.docs;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.9,
+          ),
+          itemCount: docs.length,
+          itemBuilder: (ctx, i) {
+            final doc = docs[i];
+            final name = doc['name'] as String;
+            final color = Color(int.parse(doc['colorHex'].substring(1), radix: 16) + 0xFF000000);
+            final icon = IconData(doc['iconCodePoint'], fontFamily: 'MaterialIcons');
+            
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => WorkoutCategoryScreen(categoryName: name),
+                  ),
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  border: Border.all(color: color.withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 30, color: color),
+                    const SizedBox(height: 8),
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             );
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: (categories[index]['color'] as Color).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: (categories[index]['color'] as Color).withOpacity(0.3)),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  categories[index]['icon'] as IconData,
-                  size: 30,
-                  color: categories[index]['color'] as Color,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  categories[index]['name'] as String,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: categories[index]['color'] as Color,
-                  ),
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
   }
 
-  Widget _buildPopularWorkouts(BuildContext context) {
-    final workouts = [
-      {
-        'name': 'Full Body HIIT',
-        'duration': '30 min',
-        'calories': '250 kcal',
-        'icon': Icons.bolt,
-        'color': Colors.orange,
-        'videos': [
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        ],
-      },
-      {
-        'name': 'Upper Body Strength',
-        'duration': '45 min',
-        'calories': '320 kcal',
-        'icon': Icons.fitness_center,
-        'color': Colors.blue,
-        'videos': [
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        ],
-      },
-      {
-        'name': 'Yoga Flow',
-        'duration': '40 min',
-        'calories': '180 kcal',
-        'icon': Icons.self_improvement,
-        'color': Colors.green,
-        'videos': [
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        ],
-      },
-    ];
+  Widget _buildAllWorkouts(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('workouts')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return Column(
-      children: workouts.map((workout) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => WorkoutDetailScreen(
-                  workoutName: workout['name'] as String,
-                  duration: workout['duration'] as String,
-                  calories: workout['calories'] as String,
-                  videos: (workout['videos'] as List<String>),
+        if (snapshot.hasError) {
+          return Text(
+            "Error loading workouts",
+            style: GoogleFonts.poppins(color: Colors.red),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.fitness_center,
+                  size: 64,
+                  color: Colors.grey[400],
                 ),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 2,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                const SizedBox(height: 16),
+                Text(
+                  "No workouts available",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: (workout['color'] as Color).withOpacity(0.2),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
+          );
+        }
+
+        final workouts = snapshot.data!.docs;
+        return Column(
+          children: workouts.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WorkoutDetailsScreen(
+                      title: data['title'] ?? 'Workout',
+                      videoPath: data['videoUrl'] ?? '',
+                      time: data['duration']?.toString() ?? '0',
+                      level: data['difficulty'] ?? 'Beginner',
+                      description: data['description'] ?? 'No description available',
                     ),
                   ),
-                  child: Center(
-                    child: Icon(
-                      workout['icon'] as IconData,
-                      size: 50,
-                      color: workout['color'] as Color,
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        workout['name'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      height: 140,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        gradient: LinearGradient(
+                          colors: [Colors.deepPurple.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+                      child: Stack(
                         children: [
-                          _buildWorkoutInfo(
-                              Icons.timer, workout['duration'] as String),
-                          const SizedBox(width: 16),
-                          _buildWorkoutInfo(
-                            Icons.local_fire_department,
-                            workout['calories'] as String,
+                          Center(
+                            child: Icon(
+                              Icons.fitness_center,
+                              size: 50,
+                              color: Colors.deepPurple,
+                            ),
                           ),
-                          const Spacer(),
-                          const Icon(Icons.star, size: 16, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          const Text(
-                            '4.8',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getDifficultyColor(data['difficulty']),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                data['difficulty'] ?? 'Beginner',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['title'] ?? 'Workout',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            data['description'] ?? 'No description available',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _buildWorkoutInfo(
+                                Icons.timer,
+                                '${data['duration'] ?? 0} min',
+                              ),
+                              const SizedBox(width: 20),
+                              _buildWorkoutInfo(
+                                Icons.local_fire_department,
+                                '${data['calories'] ?? 0} cal',
+                              ),
+                              const SizedBox(width: 20),
+                              _buildWorkoutInfo(
+                                Icons.category,
+                                data['category'] ?? 'General',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
+  }
+
+  Color _getDifficultyColor(String? difficulty) {
+    switch (difficulty?.toLowerCase()) {
+      case 'beginner':
+        return Colors.green;
+      case 'intermediate':
+        return Colors.orange;
+      case 'advanced':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildWorkoutInfo(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey),
+        Icon(icon, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(
-            color: Colors.grey,
+          style: GoogleFonts.poppins(
+            color: Colors.grey[600],
             fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -331,8 +451,8 @@ class WorkoutsScreen extends StatelessWidget {
       selectedItemColor: Colors.deepPurple,
       unselectedItemColor: Colors.grey,
       showUnselectedLabels: true,
-      backgroundColor: Colors.white,
-      elevation: 10,
+      selectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
+      unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
       items: [
         _buildNavItem(Icons.home_outlined, Icons.home, 'Home'),
         _buildNavItem(Icons.fitness_center_outlined, Icons.fitness_center, 'Workouts'),
@@ -341,21 +461,15 @@ class WorkoutsScreen extends StatelessWidget {
         _buildNavItem(Icons.people_outline, Icons.people, 'Community'),
       ],
       onTap: (index) {
-        if (index == 0) {
-          Navigator.pushNamed(context, '/');
-        } else if (index == 2) {
-          Navigator.pushNamed(context, '/meal-plans');
-        } else if (index == 3) {
-          Navigator.pushNamed(context, '/progress');
-        } else if (index == 4) {
-          Navigator.pushNamed(context, '/community');
-        }
+        if (index == 0) Navigator.pushNamed(context, '/');
+        else if (index == 2) Navigator.pushNamed(context, '/meal-plans');
+        else if (index == 3) Navigator.pushNamed(context, '/progress');
+        else if (index == 4) Navigator.pushNamed(context, '/community');
       },
     );
   }
 
-  BottomNavigationBarItem _buildNavItem(
-      IconData icon, IconData activeIcon, String label) {
+  BottomNavigationBarItem _buildNavItem(IconData icon, IconData activeIcon, String label) {
     return BottomNavigationBarItem(
       icon: Icon(icon),
       activeIcon: Icon(activeIcon),

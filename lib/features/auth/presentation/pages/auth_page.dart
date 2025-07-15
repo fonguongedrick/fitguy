@@ -8,7 +8,7 @@ import 'package:fitguy1/features/auth/presentation/widgets/signup_form.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
-  const AuthPage({super.key});
+ 
 
   @override
   ConsumerState<AuthPage> createState() => _AuthPageState();

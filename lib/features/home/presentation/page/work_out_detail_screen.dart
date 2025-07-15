@@ -95,7 +95,7 @@ class WorkoutDetailScreen extends StatelessWidget {
               ...videos.map((videoUrl) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: WorkoutVideoCard(videoUrl: videoUrl),
+                  child: WorkoutVideoCard(videoAssetPath: videoUrl),
                 );
               }).toList(),
               const SizedBox(height: 16),

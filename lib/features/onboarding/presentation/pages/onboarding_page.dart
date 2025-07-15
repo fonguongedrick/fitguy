@@ -1,3 +1,4 @@
+import 'package:fitguy1/features/auth/presentation/pages/auth_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -75,8 +76,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     isLastPage: index == onboardingItems.length - 1,
                     onGetStarted: () {
                       // Navigate to auth screen
-                      Navigator.pushReplacementNamed(context, '/auth');
-                    },
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (context) =>  AuthPage(),
+                      ));
+                    }
                   );
                 },
               ),
@@ -148,8 +151,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   else
                     ElevatedButton(
                       onPressed: () {
-                        
-                        Navigator.pushReplacementNamed(context, '/homescreen');
+                        Navigator.pushReplacementNamed(context, '/auth');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
